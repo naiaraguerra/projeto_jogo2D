@@ -11,27 +11,18 @@ let prevTime = 0;
 
 animate();
 
-
-
-
-
-
-
-
-
-
-
-
 /*functions*/
 
 function animate(){
     window.requestAnimationFrame(animate);
     handleControls();
-
+    
     ctx.fillStyle = "black";
     ctx.fillRect(0,0,canvasWidth,canvasHeight);
+
+    fundo.draw();
     player.update();
-    player2.update();
+    //player2.update();
     let delta = (performance.now() - prevTime) / 1000;
     let fps = 1 / delta;
     
