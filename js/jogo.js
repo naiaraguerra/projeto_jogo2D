@@ -20,7 +20,7 @@ function animate(){
     ctx.fillStyle = "black";
     ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
-    fundo.draw();
+    fundo.update();
     player.update();
     //player2.update();
     let delta = (performance.now() - prevTime) / 1000;

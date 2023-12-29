@@ -1,80 +1,177 @@
 const gravity = 0.6;
+const floorHeight = 96
+const backgroundPath = "../assets/backgroud/placeholder.png";
+const defeaultObjectSpritePath = "../assets/object/square.svg";
 
-const backgroundPath = "../assets/backgroud/placeholder.png"
 //acoes
 class Personagem {
 
-    constructor({position,velocity, dimensions, source}){
+    constructor({position,velocity, dimensions, source, scale, offset, sprites}){
         this.position = position;
         this.velocity = velocity;
         this.width = dimensions?.width;
         this.height = dimensions?.height;
 
-        if(source){
-            this.image = new Image();
-            this.image.src = source;
+        this.scale = scale || 1;
+        this.image = new Image();
+        this.image.src = source || defeaultObjectSpritePath;
 
-            this.width = this.image.width;
-            this.height = this.image.height;
+        this.width = this.image.width * this.scale;
+        this.height = this.image.height * this.scale;
+
+        this.offset = offset || {
+            x: 0,
+            y: 0
         }
+
+        this.sprites = sprites || {
+            idle: {
+                src: this.image.src,
+                totalPerSpritesFrame: 1,
+                framesPerSpritesFrame: 1,
+
+            }
+        }
+
+        this.currentSprite =  this.sprites.idle;
+
+        this.elapsedTime = 0;
+        this.currentSpriteFrame = 0; 
+        this.totalPerSpritesFrame = this.sprites.idle.totalPerSpritesFrame;
+        this.framesPerSpritesFrame =  this.sprites.idle.framesPerSpritesFrame;
+    }
+
+    setSprite(sprite){
+        this.currentSprite = this.sprites[sprite];
+
+        if(!this.currentSprite){
+            this.currentSprite = this.sprites.idle;
+        }
+
+    }
+
+    loadSprite(sprite){
+        let previousSprite = this.image.src;
+
+        this.image = new Image();
+        this.image.src = this.currentSprite.src;
+        this.width = this.image.width * this.scale;
+        this.height = this.image.height * this.scale;
+
+        this.totalPerSpritesFrame = this.currentSprite.totalPerSpritesFrame;
+        this.framesPerSpritesFrame = this.currentSprite.framesPerSpritesFrame;
+
+        let newSprite = this.image.src;
+
+        if(previousSprite != newSprite){
+            let previousSprite = new Image();
+            previousSprite.src =  previousSprite;
+            this.position.y += (previousSprite.height - this.image.height) * this.scale;
+        }
+
     }
 
     draw(){
+        ctx.drawImage(
+            this.image,
+            this.currentSpriteFrame * this.image.width / this.totalPerSpritesFrame,
+            0,
+            this.image.width / this.totalPerSpritesFrame,
+            this.image.height,
+            0,
+            0,
+            this.width / this.totalPerSpritesFrame,
+            this.height
+        );
 
+    }
 
-        if(this.image){
-           ctx.drawImage(
-                this.image,
-                this.position.x,
-                this.position.y,
-                this.width,
-                this.height
-            );
-
-        } else {
-            //classica a cor da class persoagem
-            ctx.fillStyle = "white";
-
-            //atribui os valores
-            ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
-        }
-
-
-
-        if(this.isAttacking){
-            ctx.fillStyle = "red";
-            ctx.fillRect(this.attackBox.position.x,this.attackBox.position.y, this.attackBox.width, this.attackBox.height);
+    
+    animete(){
+        this.elapsedTime++;
+        if(this.elapsedTime >= this.framesPerSpritesFrame){
+            this.currentSpriteFrame ++;
+             
+            if(this.currentSpriteFrame >= this.totalPerSpritesFrame){
+                this.currentSpriteFrame = 0;
+            }
+            this.elapsedTime = 0;
         }
     }
 
+    
+
     //realiza a movimentação do player
     update(){
+        this.animete();
+        this.draw();
+    }
 
-        //math.ceil = arredonda todos os valores para cima;
+}
 
-        if(Math.ceil(this.position.y+this.height >= canvas.height)){
-            //está no chão
-            this.onGround = true;
+
+
+
+
+
+class Fighter extends Personagem{
+    constructor({position, velocity, scale, sprites}){
+        super({
+            position, velocity,scale, sprites
+        })
+        this.velocity = velocity;
+
+        //tecla que está sendo precionada
+        this.lastKeyPressed;
+
+        //Indica se o personagem está ou não no chão
+        this.onGround;
+
+         //proprieade de ataque
+         this.attackBox = {
+            position: {
+                x: this.position.x,
+                y: this.position.y
+            },
+            width: 125,
+            height: 50
+
+        }
+       
+
+        //serve para atacar e esperar os segundos poder atacar novamente;
+        this.isAttacking;
+        this.attackCoolDown = 500;
+        this.onAttackCoolDown ;
+
+    }
+    
+    gravity() {
+        if (this.position.y + this.height >= canvas.height - floorHeight) {
+            this.onGround = true
         } else {
-            //está no ar;
             this.onGround = false
         }
 
-        if(this.position.y+this.height > canvas.height){
-            this.position.y = canvas.height-this.height;
-            this.velocity.y = 0;
+        if (this.position.y + this.height > canvas.height - floorHeight) {
+            this.position.y = canvas.height - this.height - floorHeight
+            this.velocity.y = 0
         } else {
-            if(!this.onGround) this.velocity.y += gravity;
+            if (!this.onGround) this.velocity.y += gravity
         }
 
+        this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
 
-       
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
+      /*  this.attackBox.position.x = this.position.x
+        this.attackBox.position.y = this.position.y*/
+    }
 
-        this.attackBox.position.x = this.position.x;
-        this.attackBox.position.y = this.position.y;
+    update() {
+        this.gravity();
+        this.loadSprite();
         this.draw();
+        this.animate();
     }
 
     attack() {
@@ -83,7 +180,7 @@ class Personagem {
         this.isAttacking = true
         this.onAttackCooldown = true
 
-       // player.setSprite("attacking")
+       player.setSprite("attacking")
 
         setTimeout(() => {
             this.isAttacking = false
@@ -93,50 +190,12 @@ class Personagem {
             this.onAttackCooldown = false
         }, this.attackCooldown)
     }
-
+    
     //função de pular
     jump(){
         if(!this.onGround) return
         this.velocity.y -= 16;
     }
-
-}
-
-
-class Fighter extends Personagem{
-    constructor({position, velocity, dimensions}){
-        super({
-            position, velocity, dimensions
-        })
-        this.velocity = velocity;
-        this.width = dimensions.width;
-        this.height = dimensions.height;
-
-        //tecla que está sendo precionada
-        this.lastKeyPressed;
-
-        //Indica se o personagem está ou não no chão
-        this.onGround;
-
-        //proprieade de ataque
-        this.attackBox = {
-            position: {
-                x: this.position.x,
-                y: this.position.y
-            },
-            width: 125,
-            height: 50
-
-        }
-
-        //serve para atacar e esperar os segundos poder atacar novamente;
-        this.isAttacking;
-        this.attackCoolDown = 500;
-        this.onAttackCoolDown ;
-
-    }
-
-   
 
 }
 
@@ -150,9 +209,12 @@ const player = new Fighter({
         x: 0,
         y:0
     },
-    dimensions:{
-        width: 50,
-        height: 150
+    sprites: {
+        idle: {
+            src: "../assets/player/idle.png",
+            totalPerSpritesFrame: 11,
+            framesPerSpritesFrame: 1
+        }
     }
 });
 
@@ -167,17 +229,3 @@ const fundo = new Personagem({
 
 });
 
-/*const player2 = new Fighter({
-    position: {
-        x:500,
-        y:20
-    },
-    velocity: {
-        x: 0,
-        y:10
-    },
-    dimensions:{
-        width: 50,
-        height: 150
-    }
-});*/
